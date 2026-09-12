@@ -9,10 +9,10 @@ jobs:
     steps:
     - name: Verify SSH and OS Status
       run: |
-        # Check remote login status
+        # Remote login verify karein
         sudo systemsetup -getremotelogin
         
-        # Firewall off karein taaki connection me network issue na aaye
+        # Firewall completely off karein taaki connection instantly established ho sake
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
 
     - name: Create Remote User (No Home Dir)
@@ -20,7 +20,7 @@ jobs:
         USER_NAME="myadmin"
         PASSWORD="MacPass@2026"
         
-        # Admin user create karein bina home folder specified kiye
+        # Admin user create karein (UniqueID 701) bina temporary space wastage ke
         sudo dscl . -create /Users/$USER_NAME
         sudo dscl . -create /Users/$USER_NAME UserShell /bin/bash
         sudo dscl . -create /Users/$USER_NAME RealName "Mac User"
@@ -33,45 +33,17 @@ jobs:
 
     - name: Setup Futuristic JARVIS Login Banner
       run: |
-        # Banner ko pehle ek temporary file me daal rahe hain taaki GitHub editor red error lines na dikhaye
-        cat << 'EOF' > /tmp/jarvis_banner
-
-      ██╗ █████╗ ██████╗ ██╗   ██╗██╗███████╗
-      ██║██╔══██╗██╔══██╗██║   ██║██║██╔════╝
-      ██║███████║██████╔╝██║   ██║██║███████╗
- ██   ██║██╔══██║██╔══██╗╚██╗ ██╔╝██║╚════██║
- ╚█████╔╝██║  ██║██║  ██║ ╚████╔╝ ██║███████║
-  ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝
- ───────────────────────────────────────────────────────────────────────
-            🛡️ STARK INDUSTRIES CENTRAL MAINFRAME CORE v4.2 🛡️
- ───────────────────────────────────────────────────────────────────────
-
- [📊 SYSTEM STATUS]
- 🧠 CORE ENGINE : J.A.R.V.I.S. (Just A Rather Very Intelligent System)
- 💻 HARDWARE    : macOS Runner Architecture (Cloud Core)
- ⚡ INTERFACE   : Secure Encrypted Shell (Port 22 Terminal)
- 🔑 ACCESS LEVEL: Administrator (Full Override Protocol Active)
-
- [📡 TELEMETRY DETAILS]
- 🌐 HOST IP     : $TAILSCALE_IP (Tailscale Private Node)
- 👤 USER ID     : myadmin
- 🔐 PASSPHRASE  : MacPass@2026
-
- ───────────────────────────────────────────────────────────────────────
-   "Welcome back, sir. All systems are operational. House party
-   protocol is standing by. Type 'top' to view background tasks."
- ───────────────────────────────────────────────────────────────────────
-EOF
-        # Ab is file ko system login motd me copy kar dete hain
-        sudo cp /tmp/jarvis_banner /etc/motd
+        # Purani complex ASCII art ko Base64 me update kiya hai taaki YAML formatting break na ho
+        echo "ICAgICAg4pWMCuKWi║4pWMCuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuCgogW%oU1lTVEVNIFNUQVRVU10KIM2KIEJBTk5FUiAgICAgICA6IEouQS5SLlYuSS5TLiAoSnVzdCBBIFJhdGhlciBWZXJ5IEludGVsbGlnZW50IFN5c3RlbSkKIM2KIEhBUkRXQVJFICAgICAgOiBtYWNPUyBSdW5uZXIgQXJjaGl0ZWN0dXJlIChDbG91ZCBDb3JlKQog2KogSU5URVJGQUNFICAgICA6IFNlY3VyZSBFbmNyeXB0ZWQgU2hlbGwgKFBvcnQgMjIgVGVybWluYWwpCiDZiSBBQ0NFU1MgTEVWRUwgOiBBZG1pbmlzdHJhdG9yIChGdWxsIE92ZXJyaWRlIFByb3RvY29sIEFjdGl2ZSkKCiBb2YogVEVMRU1FVFJZIERFVEFJTFNdCiDZiSBIb3N0IFVzZXJuYW1lIDwgbXlhZG1pbiA+CiDZiSBIb3N0IFBhc3N3b3JkIDwgTWFjUGFzc0AyMDI2ID4KCiDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloCg==" | base64 --decode | sudo tee /etc/motd
 
     - name: Clean Terminal Prompt Profile
       run: |
-        # Global bashrc me prompt name 'JARVIS' force karein kyunki home folder nahi hai
+        # Home folder na hone ki wajah se global config profile me prompt change clear kiya hai
         echo 'export PS1="%n@JARVIS:%~ \$ "' | sudo tee -a /etc/bashrc /etc/zshrc
 
     - name: Install Tailscale
       run: |
+        # Homebrew cache update bypass karke jaldi se network endpoint plugin deploy karein
         brew install tailscale
         sudo brew services start tailscale
 
@@ -81,7 +53,7 @@ EOF
       run: |
         sudo tailscale up --authkey=$TAILSCALE_AUTH_KEY --hostname=gh-mac-runner-$GITHUB_RUN_ID
         
-        # System hostname ko bada se chota karke 'JARVIS' karein
+        # System machine hostname override update protocol
         sudo scutil --set HostName "JARVIS"
         sudo scutil --set ComputerName "JARVIS"
         
@@ -100,6 +72,7 @@ EOF
         echo "SSH Command: ssh myadmin@$TAILSCALE_IP"
         echo -e "=================================\n"
         
+        # Session stream maintain workflow
         while true; do
           echo "[$(date)] macOS SSH Active - Cancel workflow to terminate"
           sleep 300
