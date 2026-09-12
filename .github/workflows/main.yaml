@@ -38,13 +38,20 @@ jobs:
       run: |
         echo 'export PS1="%n@JARVIS:%~ \$ "' | sudo tee -a /etc/bashrc /etc/zshrc
 
+    - name: Install Virtual Framebuffer Display Driver
+      run: |
+        # macOS headless black screen issue bypass karne ke liye virtual display server client use karein
+        brew install --cask xquartz
+        
+        # Virtual framebuffer driver display setup stream allocate karein
+        sudo defaults write /Library/Preferences/com.apple.windowserver.plist VirtualDisplaySupported -bool true
+
     - name: Force Enable Native macOS VNC (Screen Sharing)
       run: |
-        # TigerVNC binary dependancy bypass karke system service load karein
+        # Access parameters aur VNC configuration setup active state me layeind
         sudo defaults write /var/db/launchd.db/com.apple.launchd/overrides.plist com.apple.screensharing -dict Disabled -bool false
         sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist
         
-        # Access parameters aur VNC configuration setup active state me layeind
         sudo defaults write /Library/Preferences/com.apple.VNCSettings.txt ScreenSharingActive -bool true
         sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAllowed -bool true
         sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARD_AllLocalUsers -bool true
