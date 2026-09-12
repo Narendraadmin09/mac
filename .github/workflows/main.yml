@@ -1,4 +1,4 @@
-name: macOS-Remote-Access
+name: macOS-SSH-Access
 on: workflow_dispatch
 
 jobs:
@@ -7,17 +7,17 @@ jobs:
     timeout-minutes: 3600
 
     steps:
-    - name: Configure Screen Sharing Permissions
+    - name: Verify SSH Status
       run: |
-        # Firewall ko off karein taaki incoming VNC packets block na ho
+        # macOS par remote login (SSH) check karein aur ensure karein ki yeh on hai
+        sudo systemsetup -getremotelogin
+        
+        # Firewall ko explicitly off karein taaki network ports block na hon
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-
-        # Screen Sharing launchd service ko configure aur turn on karein
-        sudo defaults write /var/db/launchd.db/com.apple.launchd/overrides.plist com.apple.screensharing -dict Disabled -bool false
-        sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist
 
     - name: Create Remote User
       run: |
+        # Apna manpasand Username aur Password set karein
         USER_NAME="myadmin"
         PASSWORD="MacPass@2026"
         
@@ -32,20 +32,6 @@ jobs:
         sudo dscl . -append /Groups/admin GroupMembership $USER_NAME
         
         echo "MAC_CREDS=User: $USER_NAME | Password: $PASSWORD" >> $GITHUB_ENV
-
-    - name: Strictly Enable Remote Management and VNC Access
-      run: |
-        # Sabhi users ke liye access privileges open karein taaki VNC permission block na kare
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -configure -allowAccessFor -allUsers -privs -all
-        
-        # Screen sharing database me explicitly local authentication settings allow karein
-        sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAllowed -bool true
-        sudo defaults write /Library/Preferences/com.apple.VNCSettings.txt ScreenSharingActive -bool true
-        
-        # Remote Desktop service ko fresh restart karein taaki naye rules apply ho jayein
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -restart -agent
 
     - name: Install Tailscale
       run: |
@@ -65,20 +51,21 @@ jobs:
         fi
         echo "TAILSCALE_IP=$TS_IP" >> $GITHUB_ENV
 
-    - name: Verify VNC Accessibility
+    - name: Verify SSH Port Availability
       run: |
         echo "Tailscale IP: $TAILSCALE_IP"
-        # Check karein ki port 5900 response de raha hai ya nahi
-        nc -zv -w 5 $TAILSCALE_IP 5900
+        # Check karein ki port 22 (SSH) active hai ya nahi
+        nc -zv -w 5 $TAILSCALE_IP 22
 
     - name: Maintain Connection
       run: |
-        echo -e "\n=== macOS SCREEN SHARING ACCESS ==="
-        echo "Address: $TAILSCALE_IP"
+        echo -e "\n=== macOS SSH ACCESS DETAILS ==="
+        echo "Address (IP): $TAILSCALE_IP"
         echo "$MAC_CREDS"
-        echo -e "===================================\n"
+        echo "SSH Command: ssh $USER_NAME@$TAILSCALE_IP"
+        echo -e "=================================\n"
         
         while true; do
-          echo "[$(date)] macOS Remote Active - Cancel workflow to terminate"
+          echo "[$(date)] macOS SSH Active - Cancel workflow to terminate"
           sleep 300
         done
