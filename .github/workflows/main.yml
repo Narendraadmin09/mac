@@ -1,4 +1,4 @@
-name: macOS-SSH-Access
+name: macOS-JARVIS-SSH
 on: workflow_dispatch
 
 jobs:
@@ -7,31 +7,67 @@ jobs:
     timeout-minutes: 3600
 
     steps:
-    - name: Verify SSH Status
+    - name: Verify SSH and OS Status
       run: |
-        # macOS par remote login (SSH) check karein aur ensure karein ki yeh on hai
+        # Check remote login status
         sudo systemsetup -getremotelogin
         
-        # Firewall ko explicitly off karein taaki network ports block na hon
+        # Firewall off karein taaki connection me network issue na aaye
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
 
-    - name: Create Remote User
+    - name: Create Remote User (No Home Dir)
       run: |
-        # Apna manpasand Username aur Password set karein
         USER_NAME="myadmin"
         PASSWORD="MacPass@2026"
         
-        # UniqueID 701 ke sath admin user create karein
+        # Admin user create karein bina home folder specified kiye
         sudo dscl . -create /Users/$USER_NAME
         sudo dscl . -create /Users/$USER_NAME UserShell /bin/bash
         sudo dscl . -create /Users/$USER_NAME RealName "Mac User"
         sudo dscl . -create /Users/$USER_NAME UniqueID 701
         sudo dscl . -create /Users/$USER_NAME PrimaryGroupID 20
-        sudo dscl . -create /Users/$USER_NAME NFSHomeDirectory /Users/$USER_NAME
         sudo dscl . -passwd /Users/$USER_NAME "$PASSWORD"
         sudo dscl . -append /Groups/admin GroupMembership $USER_NAME
         
         echo "MAC_CREDS=User: $USER_NAME | Password: $PASSWORD" >> $GITHUB_ENV
+
+    - name: Setup Futuristic JARVIS Login Banner
+      run: |
+        # Dynamic SSH /etc/motd custom banner inject karein
+        cat << 'EOF' | sudo tee /etc/motd
+
+      ██╗ █████╗ ██████╗ ██╗   ██╗██╗███████╗
+      ██║██╔══██╗██╔══██╗██║   ██║██║██╔════╝
+      ██║███████║██████╔╝██║   ██║██║███████╗
+ ██   ██║██╔══██║██╔══██╗╚██╗ ██╔╝██║╚════██║
+ ╚█████╔╝██║  ██║██║  ██║ ╚████╔╝ ██║███████║
+  ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝
+ ───────────────────────────────────────────────────────────────────────
+            🛡️ STARK INDUSTRIES CENTRAL MAINFRAME CORE v4.2 🛡️
+ ───────────────────────────────────────────────────────────────────────
+
+ [📊 SYSTEM STATUS]
+ 🧠 CORE ENGINE : J.A.R.V.I.S. (Just A Rather Very Intelligent System)
+ 💻 HARDWARE    : macOS Runner Architecture (Cloud Core)
+ ⚡ INTERFACE   : Secure Encrypted Shell (Port 22 Terminal)
+ 🔑 ACCESS LEVEL: Administrator (Full Override Protocol Active)
+
+ [📡 TELEMETRY DETAILS]
+ 🌐 HOST IP     : $TAILSCALE_IP (Tailscale Private Node)
+ 👤 USER ID     : myadmin
+ 🔐 PASSPHRASE  : MacPass@2026
+
+ ───────────────────────────────────────────────────────────────────────
+   "Welcome back, sir. All systems are operational. House party
+   protocol is standing by. Type 'top' to view background tasks."
+ ───────────────────────────────────────────────────────────────────────
+
+EOF
+
+    - name: Clean Terminal Prompt Profile
+      run: |
+        # Global bashrc me prompt name 'JARVIS' force karein kyunki home folder nahi hai
+        echo 'export PS1="%n@JARVIS:%~ \$ "' | sudo tee -a /etc/bashrc /etc/zshrc
 
     - name: Install Tailscale
       run: |
@@ -44,8 +80,9 @@ jobs:
       run: |
         sudo tailscale up --authkey=$TAILSCALE_AUTH_KEY --hostname=gh-mac-runner-$GITHUB_RUN_ID
         
-        # Is command ko add karne se temporary hostname badal jayega
-        sudo scutil --set HostName "JARVIS ~/"
+        # System hostname ko bada se chota karke 'JARVIS' karein
+        sudo scutil --set HostName "JARVIS"
+        sudo scutil --set ComputerName "JARVIS"
         
         TS_IP=$(tailscale ip -4)
         if [ -z "$TS_IP" ]; then
@@ -54,19 +91,12 @@ jobs:
         fi
         echo "TAILSCALE_IP=$TS_IP" >> $GITHUB_ENV
 
-
-    - name: Verify SSH Port Availability
-      run: |
-        echo "Tailscale IP: $TAILSCALE_IP"
-        # Check karein ki port 22 (SSH) active hai ya nahi
-        nc -zv -w 5 $TAILSCALE_IP 22
-
     - name: Maintain Connection
       run: |
         echo -e "\n=== macOS SSH ACCESS DETAILS ==="
         echo "Address (IP): $TAILSCALE_IP"
         echo "$MAC_CREDS"
-        echo "SSH Command: ssh $USER_NAME@$TAILSCALE_IP"
+        echo "SSH Command: ssh myadmin@$TAILSCALE_IP"
         echo -e "=================================\n"
         
         while true; do
