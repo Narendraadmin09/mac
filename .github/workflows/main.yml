@@ -1,0 +1,80 @@
+name: macOS-Remote-Access
+on: workflow_dispatch
+
+jobs:
+  secure-mac:
+    runs-on: macos-latest
+    timeout-minutes: 3600
+
+    steps:
+    - name: Configure Core Screen Sharing (VNC) Settings
+      run: |
+        # macOS Screen Sharing (VNC) enable karein
+        sudo defaults write /var/db/launchd.db/com.apple.launchd/overrides.plist com.apple.screensharing -dict Disabled -bool false
+        sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist
+        
+        # macOS Firewall me VNC port (5900) allow karein
+        sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+
+    - name: Create Remote User with Secure Password
+      run: |
+        # 16-character secure random password generate karein
+        PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9!#$%' < /dev/urandom | head -c 16)
+        
+        # 'macuser' naam ka naya admin user banayein
+        sudo dscl . -create /Users/macuser
+        sudo dscl . -create /Users/macuser UserShell /bin/bash
+        sudo dscl . -create /Users/macuser RealName "Mac User"
+        sudo dscl . -create /Users/macuser UniqueID 501
+        sudo dscl . -create /Users/macuser PrimaryGroupID 20
+        sudo dscl . -create /Users/macuser NFSHomeDirectory /Users/macuser
+        sudo dscl . -passwd /Users/macuser "$PASSWORD"
+        sudo dscl . -append /Groups/admin GroupMembership macuser
+        
+        # Remote Management permissions assign karein
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+          -configure -allowAccessFor -specifiedUsers
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+          -configure -access -on -privs -all -users macuser
+        
+        echo "MAC_CREDS=User: macuser | Password: $PASSWORD" >> $GITHUB_ENV
+
+    - name: Install Tailscale
+      run: |
+        # Homebrew ka use karke Tailscale install karein
+        brew install tailscale
+        sudo brew services start tailscale
+
+    - name: Establish Tailscale Connection
+      env:
+        TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+      run: |
+        # Tailscale up karein
+        sudo tailscale up --authkey=$TAILSCALE_AUTH_KEY --hostname=gh-mac-runner-$GITHUB_RUN_ID
+        
+        # IP Address check karein
+        TS_IP=$(tailscale ip -4)
+        if [ -z "$TS_IP" ]; then
+          echo "Tailscale IP not assigned. Exiting."
+          exit 1
+        fi
+        echo "TAILSCALE_IP=$TS_IP" >> $GITHUB_ENV
+
+    - name: Verify VNC Accessibility
+      run: |
+        echo "Tailscale IP: $TAILSCALE_IP"
+        # Port 5900 (VNC) check karein ki open hai ya nahi
+        nc -zv -w 5 $TAILSCALE_IP 5900
+
+    - name: Maintain Connection
+      run: |
+        echo -e "\n=== macOS SCREEN SHARING ACCESS ==="
+        echo "Address: $TAILSCALE_IP"
+        echo "$MAC_CREDS"
+        echo -e "===================================\n"
+        
+        # Connection active rakhne ke liye loop
+        while true; do
+          echo "[$(date)] macOS Remote Active - Cancel workflow to terminate"
+          sleep 300
+        done
