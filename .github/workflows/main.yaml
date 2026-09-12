@@ -1,4 +1,4 @@
-name: macOS-JARVIS-SSH
+name: macOS-JARVIS-Dual-Access
 on: workflow_dispatch
 
 jobs:
@@ -9,10 +9,8 @@ jobs:
     steps:
     - name: Verify SSH and OS Status
       run: |
-        # Remote login verify karein
+        # macOS Native SSH settings configure karein
         sudo systemsetup -getremotelogin
-        
-        # Firewall completely off karein taaki connection instantly established ho sake
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
 
     - name: Create Remote User (No Home Dir)
@@ -20,7 +18,7 @@ jobs:
         USER_NAME="myadmin"
         PASSWORD="MacPass@2026"
         
-        # Admin user create karein (UniqueID 701) bina temporary space wastage ke
+        # Admin user create karein (UniqueID 701)
         sudo dscl . -create /Users/$USER_NAME
         sudo dscl . -create /Users/$USER_NAME UserShell /bin/bash
         sudo dscl . -create /Users/$USER_NAME RealName "Mac User"
@@ -33,19 +31,28 @@ jobs:
 
     - name: Setup Futuristic JARVIS Login Banner
       run: |
-        # Purani complex ASCII art ko Base64 me update kiya hai taaki YAML formatting break na ho
+        # JARVIS ASCII Banner Setup for SSH Terminal Login
         echo "ICAgICAg4pWMCuKWi║4pWMCuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuCgogW%oU1lTVEVNIFNUQVRVU10KIM2KIEJBTk5FUiAgICAgICA6IEouQS5SLlYuSS5TLiAoSnVzdCBBIFJhdGhlciBWZXJ5IEludGVsbGlnZW50IFN5c3RlbSkKIM2KIEhBUkRXQVJFICAgICAgOiBtYWNPUyBSdW5uZXIgQXJjaGl0ZWN0dXJlIChDbG91ZCBDb3JlKQog2KogSU5URVJGQUNFICAgICA6IFNlY3VyZSBFbmNyeXB0ZWQgU2hlbGwgKFBvcnQgMjIgVGVybWluYWwpCiDZiSBBQ0NFU1MgTEVWRUwgOiBBZG1pbmlzdHJhdG9yIChGdWxsIE92ZXJyaWRlIFByb3RvY29sIEFjdGl2ZSkKCiBb2YogVEVMRU1FVFJZIERFVEFJTFNdCiDZiSBIb3N0IFVzZXJuYW1lIDwgbXlhZG1pbiA+CiDZiSBIb3N0IFBhc3N3b3JkIDwgTWFjUGFzc0AyMDI2ID4KCiDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloCg==" | base64 --decode | sudo tee /etc/motd
 
     - name: Clean Terminal Prompt Profile
       run: |
-        # Home folder na hone ki wajah se global config profile me prompt change clear kiya hai
         echo 'export PS1="%n@JARVIS:%~ \$ "' | sudo tee -a /etc/bashrc /etc/zshrc
 
-    - name: Install Tailscale
+    - name: Install Tailscale and TigerVNC
       run: |
-        # Homebrew cache update bypass karke jaldi se network endpoint plugin deploy karein
-        brew install tailscale
+        # TigerVNC aur Tailscale dono ek sath install karein
+        brew install tailscale tigervnc
         sudo brew services start tailscale
+
+    - name: Start Dedicated VNC Server Screen
+      run: |
+        # VNC ke liye internal session password configuration file set karein
+        mkdir -p ~/.vnc
+        echo "MacPass@2026" | vncpasswd -f > ~/.vnc/passwd
+        chmod 600 ~/.vnc/passwd
+        
+        # TigerVNC server ko display :1 (Port 5901) par binary run karein
+        vncserver :1 -geometry 1280x720 -localhost no
 
     - name: Establish Tailscale Connection
       env:
@@ -53,7 +60,6 @@ jobs:
       run: |
         sudo tailscale up --authkey=$TAILSCALE_AUTH_KEY --hostname=gh-mac-runner-$GITHUB_RUN_ID
         
-        # System machine hostname override update protocol
         sudo scutil --set HostName "JARVIS"
         sudo scutil --set ComputerName "JARVIS"
         
@@ -66,14 +72,16 @@ jobs:
 
     - name: Maintain Connection
       run: |
-        echo -e "\n=== macOS SSH ACCESS DETAILS ==="
-        echo "Address (IP): $TAILSCALE_IP"
-        echo "$MAC_CREDS"
-        echo "SSH Command: ssh myadmin@$TAILSCALE_IP"
-        echo -e "=================================\n"
+        echo -e "\n=== 🛠️ DUAL ACCESS CHANNELS ACTIVE ==="
+        echo "🖥️ HOST IP     : $TAILSCALE_IP"
+        echo "👤 USERNAME    : myadmin"
+        echo "🔑 PASSWORD    : MacPass@2026"
+        echo -e "───────────────────────────────────────"
+        echo "📟 SSH COMMAND : ssh myadmin@$TAILSCALE_IP"
+        echo "💻 VNC ADDRESS : $TAILSCALE_IP:5901"
+        echo -e "=======================================\n"
         
-        # Session stream maintain workflow
         while true; do
-          echo "[$(date)] macOS SSH Active - Cancel workflow to terminate"
+          echo "[$(date)] J.A.R.V.I.S Mainframe Online - Standing By..."
           sleep 300
         done
