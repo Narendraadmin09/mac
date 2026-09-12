@@ -7,9 +7,9 @@ jobs:
     timeout-minutes: 3600
 
     steps:
-    - name: Verify SSH and OS Status
+    - name: Configure SSH and OS Network Rules
       run: |
-        # macOS Native SSH settings configure karein
+        # macOS Native SSH and Remote Management access override protocols
         sudo systemsetup -getremotelogin
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
 
@@ -18,7 +18,7 @@ jobs:
         USER_NAME="myadmin"
         PASSWORD="MacPass@2026"
         
-        # Admin user create karein (UniqueID 701)
+        # Admin user accounts initialize protocol (UniqueID 701)
         sudo dscl . -create /Users/$USER_NAME
         sudo dscl . -create /Users/$USER_NAME UserShell /bin/bash
         sudo dscl . -create /Users/$USER_NAME RealName "Mac User"
@@ -31,28 +31,32 @@ jobs:
 
     - name: Setup Futuristic JARVIS Login Banner
       run: |
-        # JARVIS ASCII Banner Setup for SSH Terminal Login
+        # Base64 encrypted stream for smooth YAML code validation (No text-editor red lines)
         echo "ICAgICAg4pWMCuKWi║4pWMCuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuKWhuCgogW%oU1lTVEVNIFNUQVRVU10KIM2KIEJBTk5FUiAgICAgICA6IEouQS5SLlYuSS5TLiAoSnVzdCBBIFJhdGhlciBWZXJ5IEludGVsbGlnZW50IFN5c3RlbSkKIM2KIEhBUkRXQVJFICAgICAgOiBtYWNPUyBSdW5uZXIgQXJjaGl0ZWN0dXJlIChDbG91ZCBDb3JlKQog2KogSU5URVJGQUNFICAgICA6IFNlY3VyZSBFbmNyeXB0ZWQgU2hlbGwgKFBvcnQgMjIgVGVybWluYWwpCiDZiSBBQ0NFU1MgTEVWRUwgOiBBZG1pbmlzdHJhdG9yIChGdWxsIE92ZXJyaWRlIFByb3RvY29sIEFjdGl2ZSkKCiBb2YogVEVMRU1FVFJZIERFVEFJTFNdCiDZiSBIb3N0IFVzZXJuYW1lIDwgbXlhZG1pbiA+CiDZiSBIb3N0IFBhc3N3b3JkIDwgTWFjUGFzc0AyMDI2ID4KCiDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloDiloCg==" | base64 --decode | sudo tee /etc/motd
 
     - name: Clean Terminal Prompt Profile
       run: |
         echo 'export PS1="%n@JARVIS:%~ \$ "' | sudo tee -a /etc/bashrc /etc/zshrc
 
-    - name: Install Tailscale and TigerVNC
+    - name: Force Enable Native macOS VNC (Screen Sharing)
       run: |
-        # TigerVNC aur Tailscale dono ek sath install karein
-        brew install tailscale tigervnc
-        sudo brew services start tailscale
-
-    - name: Start Dedicated VNC Server Screen
-      run: |
-        # VNC ke liye internal session password configuration file set karein
-        mkdir -p ~/.vnc
-        echo "MacPass@2026" | vncpasswd -f > ~/.vnc/passwd
-        chmod 600 ~/.vnc/passwd
+        # TigerVNC binary dependancy bypass karke system service load karein
+        sudo defaults write /var/db/launchd.db/com.apple.launchd/overrides.plist com.apple.screensharing -dict Disabled -bool false
+        sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist
         
-        # TigerVNC server ko display :1 (Port 5901) par binary run karein
-        vncserver :1 -geometry 1280x720 -localhost no
+        # Access parameters aur VNC configuration setup active state me layeind
+        sudo defaults write /Library/Preferences/com.apple.VNCSettings.txt ScreenSharingActive -bool true
+        sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAllowed -bool true
+        sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARD_AllLocalUsers -bool true
+        
+        # Pure system core screen preferences authorization set karein
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+          -configure -allowAccessFor -allUsers -privs -all
+
+    - name: Install Tailscale
+      run: |
+        brew install tailscale
+        sudo brew services start tailscale
 
     - name: Establish Tailscale Connection
       env:
@@ -60,6 +64,7 @@ jobs:
       run: |
         sudo tailscale up --authkey=$TAILSCALE_AUTH_KEY --hostname=gh-mac-runner-$GITHUB_RUN_ID
         
+        # Network identification update
         sudo scutil --set HostName "JARVIS"
         sudo scutil --set ComputerName "JARVIS"
         
@@ -72,16 +77,16 @@ jobs:
 
     - name: Maintain Connection
       run: |
-        echo -e "\n=== 🛠️ DUAL ACCESS CHANNELS ACTIVE ==="
+        echo -e "\n=== 🛠️ J.A.R.V.I.S DUAL ACCESS CHANNELS ACTIVE ==="
         echo "🖥️ HOST IP     : $TAILSCALE_IP"
         echo "👤 USERNAME    : myadmin"
         echo "🔑 PASSWORD    : MacPass@2026"
-        echo -e "───────────────────────────────────────"
+        echo -e "──────────────────────────────────────────────────"
         echo "📟 SSH COMMAND : ssh myadmin@$TAILSCALE_IP"
-        echo "💻 VNC ADDRESS : $TAILSCALE_IP:5901"
-        echo -e "=======================================\n"
+        echo "💻 VNC PORT    : 5900 (Native Screen Sharing Session)"
+        echo -e "==================================================\n"
         
         while true; do
-          echo "[$(date)] J.A.R.V.I.S Mainframe Online - Standing By..."
+          echo "[$(date)] J.A.R.V.I.S Mainframe Online - Systems Stable."
           sleep 300
         done
