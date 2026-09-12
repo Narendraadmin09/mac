@@ -9,19 +9,19 @@ jobs:
     steps:
     - name: Configure Core Screen Sharing (VNC) Settings
       run: |
-        # macOS Screen Sharing (VNC) enable karein
+        # macOS Screen Sharing (VNC) ko background me enable karein
         sudo defaults write /var/db/launchd.db/com.apple.launchd/overrides.plist com.apple.screensharing -dict Disabled -bool false
         sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist
         
-        # macOS Firewall me VNC port (5900) allow karein
+        # Firewall ko off karein taaki incoming connections block na ho
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
 
-    - name: Create Remote User with Secure Password
+    - name: Create Remote User
       run: |
-        # 16-character secure random password generate karein
-        PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9!#$%' < /dev/urandom | head -c 16)
+        # 8-character ka ek secure aur fast password generate karein
+        PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9!#$%' < /dev/urandom | head -c 8)
         
-        # 'macuser' naam ka naya admin user banayein
+        # 'macuser' naam ka naya admin user banayein (Bina loop me fanse)
         sudo dscl . -create /Users/macuser
         sudo dscl . -create /Users/macuser UserShell /bin/bash
         sudo dscl . -create /Users/macuser RealName "Mac User"
@@ -31,17 +31,19 @@ jobs:
         sudo dscl . -passwd /Users/macuser "$PASSWORD"
         sudo dscl . -append /Groups/admin GroupMembership macuser
         
-        # Remote Management permissions assign karein
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -configure -allowAccessFor -specifiedUsers
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -configure -access -on -privs -all -users macuser
+        # Is user ke liye remote management access allow karein
+        sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAllowed 1
         
         echo "MAC_CREDS=User: macuser | Password: $PASSWORD" >> $GITHUB_ENV
 
+    - name: Enable Screen Sharing Legacy VNC Settings
+      run: |
+        # Screen Sharing service ko active state me force karein
+        sudo defaults write /Library/Preferences/com.apple.VNCSettings.txt ScreenSharingActive -bool true
+
     - name: Install Tailscale
       run: |
-        # Homebrew ka use karke Tailscale install karein
+        # Homebrew ka use karke Tailscale jaldi se install karein
         brew install tailscale
         sudo brew services start tailscale
 
@@ -49,10 +51,10 @@ jobs:
       env:
         TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
       run: |
-        # Tailscale up karein
+        # Tailscale ko auth key aur unique hostname ke sath up karein
         sudo tailscale up --authkey=$TAILSCALE_AUTH_KEY --hostname=gh-mac-runner-$GITHUB_RUN_ID
         
-        # IP Address check karein
+        # Tailscale assigned IP address ko fetch karein
         TS_IP=$(tailscale ip -4)
         if [ -z "$TS_IP" ]; then
           echo "Tailscale IP not assigned. Exiting."
@@ -63,7 +65,7 @@ jobs:
     - name: Verify VNC Accessibility
       run: |
         echo "Tailscale IP: $TAILSCALE_IP"
-        # Port 5900 (VNC) check karein ki open hai ya nahi
+        # Network utility se verify karein ki port 5900 open hai ya nahi
         nc -zv -w 5 $TAILSCALE_IP 5900
 
     - name: Maintain Connection
@@ -73,7 +75,7 @@ jobs:
         echo "$MAC_CREDS"
         echo -e "===================================\n"
         
-        # Connection active rakhne ke liye loop
+        # Runner session ko 6 hours tak alive rakhne ke liye infinite loop
         while true; do
           echo "[$(date)] macOS Remote Active - Cancel workflow to terminate"
           sleep 300
