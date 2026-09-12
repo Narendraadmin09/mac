@@ -18,23 +18,24 @@ jobs:
 
     - name: Create Remote User
       run: |
-        # 8-character ka ek secure aur fast password generate karein
-        PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9!#$%' < /dev/urandom | head -c 8)
+        # Yahan apna manpasand Username aur Password set karein
+        USER_NAME="myadmin"
+        PASSWORD="MacPass@2026"
         
-        # 'macuser' naam ka naya admin user banayein (Bina loop me fanse)
-        sudo dscl . -create /Users/macuser
-        sudo dscl . -create /Users/macuser UserShell /bin/bash
-        sudo dscl . -create /Users/macuser RealName "Mac User"
-        sudo dscl . -create /Users/macuser UniqueID 501
-        sudo dscl . -create /Users/macuser PrimaryGroupID 20
-        sudo dscl . -create /Users/macuser NFSHomeDirectory /Users/macuser
-        sudo dscl . -passwd /Users/macuser "$PASSWORD"
-        sudo dscl . -append /Groups/admin GroupMembership macuser
+        # Naya admin user banayein (Bina loop me fanse)
+        sudo dscl . -create /Users/$USER_NAME
+        sudo dscl . -create /Users/$USER_NAME UserShell /bin/bash
+        sudo dscl . -create /Users/$USER_NAME RealName "Mac User"
+        sudo dscl . -create /Users/$USER_NAME UniqueID 501
+        sudo dscl . -create /Users/$USER_NAME PrimaryGroupID 20
+        sudo dscl . -create /Users/$USER_NAME NFSHomeDirectory /Users/$USER_NAME
+        sudo dscl . -passwd /Users/$USER_NAME "$PASSWORD"
+        sudo dscl . -append /Groups/admin GroupMembership $USER_NAME
         
         # Is user ke liye remote management access allow karein
         sudo defaults write /Library/Preferences/com.apple.RemoteManagement VNCAllowed 1
         
-        echo "MAC_CREDS=User: macuser | Password: $PASSWORD" >> $GITHUB_ENV
+        echo "MAC_CREDS=User: $USER_NAME | Password: $PASSWORD" >> $GITHUB_ENV
 
     - name: Enable Screen Sharing Legacy VNC Settings
       run: |
@@ -75,7 +76,7 @@ jobs:
         echo "$MAC_CREDS"
         echo -e "===================================\n"
         
-        # Runner session ko 6 hours tak alive rakhne ke liye infinite loop
+        # Runner session ko active rakhne ke liye infinite loop
         while true; do
           echo "[$(date)] macOS Remote Active - Cancel workflow to terminate"
           sleep 300
