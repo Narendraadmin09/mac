@@ -9,6 +9,7 @@ jobs:
     timeout-minutes: 360
 
     steps:
+
       - name: Enable RDP
         shell: powershell
         run: |
@@ -20,15 +21,25 @@ jobs:
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
           Set-Service -Name TermService -StartupType Automatic
-          Start-Service TermService
+          Start-Service -Name TermService
+
+          Write-Host "RDP enabled."
 
       - name: Create RDP User
         shell: powershell
         run: |
           $username = "rdpuser"
-          $password = [System.Web.Security.Membership]::GeneratePassword(16, 4)
+
+          $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+          $password = -join (1..20 | ForEach-Object {
+              $chars[(Get-Random -Maximum $chars.Length)]
+          })
 
           $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+
+          if (Get-LocalUser -Name $username -ErrorAction SilentlyContinue) {
+              Remove-LocalUser -Name $username
+          }
 
           New-LocalUser `
             -Name $username `
@@ -40,52 +51,69 @@ jobs:
             -Group "Remote Desktop Users" `
             -Member $username
 
-          "RDP_USERNAME=$username" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "RDP_PASSWORD=$password" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "RDP_USERNAME=$username" | Out-File `
+            -FilePath $env:GITHUB_ENV `
+            -Append
+
+          "RDP_PASSWORD=$password" | Out-File `
+            -FilePath $env:GITHUB_ENV `
+            -Append
+
+          Write-Host "RDP user created."
 
       - name: Install Tailscale
         shell: powershell
         run: |
-          $url = "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe"
           $installer = "$env:TEMP\tailscale-setup.exe"
 
-          Invoke-WebRequest -Uri $url -OutFile $installer
+          Invoke-WebRequest `
+            -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe" `
+            -OutFile $installer
 
           Start-Process `
             -FilePath $installer `
             -ArgumentList "/quiet" `
             -Wait
 
+          Write-Host "Tailscale installed."
+
       - name: Connect to Tailscale
         shell: powershell
         env:
           TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
         run: |
-          & "C:\Program Files\Tailscale\tailscale.exe" up `
+          $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
+
+          & $tailscale up `
             --authkey="$env:TAILSCALE_AUTH_KEY" `
             --hostname="github-rdp-$env:GITHUB_RUN_ID"
+
+          Write-Host "Connected to Tailscale."
 
       - name: Get Tailscale IP
         shell: powershell
         run: |
-          $ts = "C:\Program Files\Tailscale\tailscale.exe"
+          $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
 
-          $ip = & $ts ip -4
+          $ip = & $tailscale ip -4
 
           Write-Host ""
           Write-Host "======================================"
-          Write-Host "Tailscale IPv4: $ip"
-          Write-Host "RDP Username: $env:RDP_USERNAME"
-          Write-Host "RDP Password: $env:RDP_PASSWORD"
+          Write-Host "RDP READY"
+          Write-Host "======================================"
+          Write-Host "Tailscale IP : $ip"
+          Write-Host "RDP Port     : 3389"
+          Write-Host "Username     : $env:RDP_USERNAME"
+          Write-Host "Password     : $env:RDP_PASSWORD"
           Write-Host "======================================"
           Write-Host ""
 
-      - name: Keep RDP Online
+      - name: Keep Runner Alive
         shell: powershell
         run: |
-          Write-Host "RDP is ready."
-          Write-Host "Waiting for the GitHub Actions job to finish..."
+          Write-Host "Windows RDP is running."
+          Write-Host "Keeping the runner alive..."
 
           while ($true) {
-            Start-Sleep -Seconds 60
+              Start-Sleep -Seconds 60
           }
