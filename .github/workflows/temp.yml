@@ -30,7 +30,7 @@ jobs:
           MY_SECRET_PASSWORD: \${{ secrets.RDP_PASSWORD }}
         run: |
           $username = "admin"
-          $password = env:MY_SECRET_PASSWORD
+          $password = "ngroking#123"
 
           securePassword = ConvertTo-SecureString password -AsPlainText -Force
 
@@ -87,8 +87,8 @@ jobs:
       - name: Get Static Tailscale IP
         shell: powershell
         run: |
-          \$tailscale = "C:\Program Files\Tailscale\tailscale.exe"
-          \(ip = &\)tailscale ip -4
+          $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
+          (ip = &\)tailscale ip -4
 
           Write-Host ""
           Write-Host "======================================"
