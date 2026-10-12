@@ -12,62 +12,39 @@ jobs:
       - name: Enable RDP
         shell: powershell
         run: |
-          Set-ItemProperty `
-            -Path "HKLM:SystemCurrentControlSetControlTerminal Server" `
-            -Name "fDenyTSConnections" `
-            -Value 0
-
+          # Single line script taaki backslash (\) gayab na ho
+          Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-
           Set-Service -Name TermService -StartupType Automatic
           Start-Service -Name TermService
-
           Write-Host "RDP enabled."
 
       - name: Create Static RDP User
         shell: powershell
-        env:
-          MY_SECRET_PASSWORD: ${{ secrets.RDP_PASSWORD }}
         run: |
           $username = "admin"
           $password = "ngroking#123"
 
+          # Saare variables ko properly '$' ke sath format kar diya hai
           $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 
           if (Get-LocalUser -Name $username -ErrorAction SilentlyContinue) {
               Remove-LocalUser -Name $username
           }
 
-          New-LocalUser `
-            -Name $username `
-            -Password $securePassword `
-            -FullName "Static RDP User" `
-            -Description "GitHub Actions Permanent RDP User"
-
-          Add-LocalGroupMember `
-            -Group "Remote Desktop Users" `
-            -Member $username
-
-          Add-LocalGroupMember `
-            -Group "Administrators" `
-            -Member $username
-
+          New-LocalUser -Name $username -Password $securePassword -FullName "Static RDP User" -Description "GitHub Actions Permanent RDP User"
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member $username
+          Add-LocalGroupMember -Group "Administrators" -Member $username
           Write-Host "Static RDP user created successfully."
 
       - name: Install Tailscale
         shell: powershell
         run: |
-          installer = "env:TEMPtailscale-setup.exe"
-
-          Invoke-WebRequest `
-            -Uri "https://tailscale.com" `
-            -OutFile $installer
-
-          Start-Process `
-            -FilePath $installer `
-            -ArgumentList "/quiet" `
-            -Wait
-
+          $installer = "$env:TEMP\tailscale-setup.exe"
+          
+          # Official Direct URL package download karne ke liye updated link
+          Invoke-WebRequest -Uri "https://tailscale.com" -OutFile $installer
+          Start-Process -FilePath $installer -ArgumentList "/quiet" -Wait
           Write-Host "Tailscale installed."
 
       - name: Connect to Tailscale (Static Identity)
@@ -75,28 +52,23 @@ jobs:
         env:
           TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
         run: |
-          $tailscale = "C:Program FilesTailscaletailscale.exe"
-
-          & $tailscale up `
-            --authkey="$env:TAILSCALE_AUTH_KEY" `
-            --hostname="github-rdp-runner" `
-            --accept-routes
-
+          $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
+          & $tailscale up --authkey="$env:TAILSCALE_AUTH_KEY" --hostname="github-rdp-runner" --accept-routes
           Write-Host "Connected to Tailscale with a fixed identity."
 
       - name: Get Static Tailscale IP
         shell: powershell
         run: |
-          $tailscale = "C:Program FilesTailscaletailscale.exe"
-          (ip = &)tailscale ip -4
+          $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
+          $ip = & $tailscale ip -4
 
           Write-Host ""
           Write-Host "======================================"
           Write-Host "RDP IS READY TO CONNECT"
           Write-Host "======================================"
           Write-Host "IP Address : $ip"
-          Write-Host "Username   : github-admin"
-          Write-Host "Password   : [Aapka GitHub Secret Password]"
+          Write-Host "Username   : admin"
+          Write-Host "Password   : ngroking#123"
           Write-Host "======================================"
           Write-Host "Note: Ab aap har run me isi IP aur Password se bina logs dekhe connect kar sakte hain."
           Write-Host ""
