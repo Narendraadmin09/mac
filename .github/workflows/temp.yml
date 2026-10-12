@@ -12,7 +12,6 @@ jobs:
       - name: Enable RDP
         shell: powershell
         run: |
-          # Single line script taaki backslash (\) gayab na ho
           Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-Service -Name TermService -StartupType Automatic
@@ -25,7 +24,6 @@ jobs:
           $username = "admin"
           $password = "ngroking#123"
 
-          # Saare variables ko properly '$' ke sath format kar diya hai
           $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 
           if (Get-LocalUser -Name $username -ErrorAction SilentlyContinue) {
@@ -42,10 +40,17 @@ jobs:
         run: |
           $installer = "$env:TEMP\tailscale-setup.exe"
           
-          # Official Direct URL package download karne ke liye updated link
-          Invoke-WebRequest -Uri "https://tailscale.com" -OutFile $installer
+          if (Test-Path $installer) {
+              Remove-Item -Path $installer -Force
+          }
+          
+          Write-Host "Downloading Tailscale..."
+          Import-Module BitsTransfer
+          Start-BitsTransfer -Source "https://tailscale.com" -Destination $installer
+          
+          Write-Host "Installing Tailscale..."
           Start-Process -FilePath $installer -ArgumentList "/quiet" -Wait
-          Write-Host "Tailscale installed."
+          Write-Host "Tailscale installed successfully."
 
       - name: Connect to Tailscale (Static Identity)
         shell: powershell
