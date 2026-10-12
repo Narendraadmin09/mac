@@ -38,18 +38,9 @@ jobs:
       - name: Install Tailscale
         shell: powershell
         run: |
-          $installer = "$env:TEMP\tailscale-setup.exe"
-          
-          if (Test-Path $installer) {
-              Remove-Item -Path $installer -Force
-          }
-          
-          Write-Host "Downloading Tailscale..."
-          Import-Module BitsTransfer
-          Start-BitsTransfer -Source "https://tailscale.com" -Destination $installer
-          
-          Write-Host "Installing Tailscale..."
-          Start-Process -FilePath $installer -ArgumentList "/quiet" -Wait
+          Write-Host "Installing Tailscale via Chocolatey..."
+          # Yeh method corrupted file wale error ko 100% bypass kar dega
+          choco install tailscale -y
           Write-Host "Tailscale installed successfully."
 
       - name: Connect to Tailscale (Static Identity)
