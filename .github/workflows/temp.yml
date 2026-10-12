@@ -29,8 +29,8 @@ jobs:
         env:
           MY_SECRET_PASSWORD: \${{ secrets.RDP_PASSWORD }}
         run: |
-          \$username = "github-admin"
-          password = env:MY_SECRET_PASSWORD
+          $username = "admin"
+          $password = env:MY_SECRET_PASSWORD
 
           securePassword = ConvertTo-SecureString password -AsPlainText -Force
 
