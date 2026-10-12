@@ -48,7 +48,6 @@ jobs:
             -Group "Remote Desktop Users" `
             -Member \$username
 
-          # Admin privileges taaki aap software install kar sakein
           Add-LocalGroupMember `
             -Group "Administrators" `
             -Member \$username
@@ -78,7 +77,6 @@ jobs:
         run: |
           $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
 
-          # Hostname ko fix kiya taaki har baar same IP mile
           & $tailscale up `
             --authkey="\$env:TAILSCALE_AUTH_KEY" `
             --hostname="github-rdp-runner" `
