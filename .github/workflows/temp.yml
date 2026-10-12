@@ -27,11 +27,10 @@ jobs:
       - name: Create Static RDP User
         shell: powershell
         env:
-          STATIC_PASSWORD: \${{ secrets.RDP_PASSWORD }}
+          MY_SECRET_PASSWORD: \${{ secrets.RDP_PASSWORD }}
         run: |
-          # Username aur Password dono ko fix kar diya gaya hai
           \$username = "github-admin"
-          password = env:STATIC_PASSWORD
+          password = env:MY_SECRET_PASSWORD
 
           securePassword = ConvertTo-SecureString password -AsPlainText -Force
 
@@ -49,7 +48,7 @@ jobs:
             -Group "Remote Desktop Users" `
             -Member \$username
 
-          # Admin rights dena taaki aap software install kar sakein
+          # Admin privileges taaki aap software install kar sakein
           Add-LocalGroupMember `
             -Group "Administrators" `
             -Member \$username
