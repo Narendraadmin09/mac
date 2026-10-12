@@ -13,7 +13,7 @@ jobs:
         shell: powershell
         run: |
           Set-ItemProperty `
-            -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" `
+            -Path "HKLM:SystemCurrentControlSetControlTerminal Server" `
             -Name "fDenyTSConnections" `
             -Value 0
 
@@ -27,41 +27,41 @@ jobs:
       - name: Create Static RDP User
         shell: powershell
         env:
-          MY_SECRET_PASSWORD: \${{ secrets.RDP_PASSWORD }}
+          MY_SECRET_PASSWORD: ${{ secrets.RDP_PASSWORD }}
         run: |
           $username = "admin"
           $password = "ngroking#123"
 
-          securePassword = ConvertTo-SecureString password -AsPlainText -Force
+          $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 
-          if (Get-LocalUser -Name \$username -ErrorAction SilentlyContinue) {
-              Remove-LocalUser -Name \$username
+          if (Get-LocalUser -Name $username -ErrorAction SilentlyContinue) {
+              Remove-LocalUser -Name $username
           }
 
           New-LocalUser `
             -Name $username `
-            -Password \$securePassword `
+            -Password $securePassword `
             -FullName "Static RDP User" `
             -Description "GitHub Actions Permanent RDP User"
 
           Add-LocalGroupMember `
             -Group "Remote Desktop Users" `
-            -Member \$username
+            -Member $username
 
           Add-LocalGroupMember `
             -Group "Administrators" `
-            -Member \$username
+            -Member $username
 
           Write-Host "Static RDP user created successfully."
 
       - name: Install Tailscale
         shell: powershell
         run: |
-          installer = "env:TEMP\tailscale-setup.exe"
+          installer = "env:TEMPtailscale-setup.exe"
 
           Invoke-WebRequest `
             -Uri "https://tailscale.com" `
-            -OutFile \$installer
+            -OutFile $installer
 
           Start-Process `
             -FilePath $installer `
@@ -75,10 +75,10 @@ jobs:
         env:
           TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
         run: |
-          $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
+          $tailscale = "C:Program FilesTailscaletailscale.exe"
 
           & $tailscale up `
-            --authkey="\$env:TAILSCALE_AUTH_KEY" `
+            --authkey="$env:TAILSCALE_AUTH_KEY" `
             --hostname="github-rdp-runner" `
             --accept-routes
 
@@ -87,14 +87,14 @@ jobs:
       - name: Get Static Tailscale IP
         shell: powershell
         run: |
-          $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
-          (ip = &\)tailscale ip -4
+          $tailscale = "C:Program FilesTailscaletailscale.exe"
+          (ip = &)tailscale ip -4
 
           Write-Host ""
           Write-Host "======================================"
           Write-Host "RDP IS READY TO CONNECT"
           Write-Host "======================================"
-          Write-Host "IP Address : \$ip"
+          Write-Host "IP Address : $ip"
           Write-Host "Username   : github-admin"
           Write-Host "Password   : [Aapka GitHub Secret Password]"
           Write-Host "======================================"
@@ -105,6 +105,6 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Windows RDP is running..."
-          while (\$true) {
+          while ($true) {
               Start-Sleep -Seconds 60
           }
