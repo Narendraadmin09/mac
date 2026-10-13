@@ -27,8 +27,8 @@ jobs:
           # -------------------------------------------------------------
           # APNA CUSTOM USERNAME AUR PASSWORD YAHAN SET KAREIN
           # Note: Password me Uppercase, Lowercase, Number aur Special Character hona zaroori hai.
-          $username = "ApnaUsername"
-          $password = "ApnaPassword123!"
+          $username = "ngrok"
+          $password = "ngrok123"
           # -------------------------------------------------------------
 
           $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
