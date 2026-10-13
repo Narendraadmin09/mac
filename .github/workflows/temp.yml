@@ -1,4 +1,4 @@
-name: Windows RDP + Tailscale_temp
+name: Windows RDP + Tailscalee
 
 on:
   workflow_dispatch:
@@ -25,13 +25,23 @@ jobs:
 
       - name: Create RDP User
         shell: powershell
+        env:
+          RDP_USERNAME: YourCustomUsername
+          RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
         run: |
-          $username = "MyRDPUser"
-          $password = "ngrok123"
+          $username = $env:RDP_USERNAME
+          $password = $env:RDP_PASSWORD
+
+          if ([string]::IsNullOrWhiteSpace($username) -or
+              [string]::IsNullOrWhiteSpace($password)) {
+            throw "Set RDP_USERNAME and RDP_PASSWORD before running."
+          }
 
           $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 
-          if (Get-LocalUser -Name $username -ErrorAction SilentlyContinue) {
+          $existingUser = Get-LocalUser -Name $username -ErrorAction SilentlyContinue
+
+          if ($existingUser) {
             Remove-LocalUser -Name $username
           }
 
@@ -46,9 +56,8 @@ jobs:
             -Member $username
 
           "RDP_USERNAME=$username" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "RDP_PASSWORD=$password" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-          Write-Host "RDP user created."
+          Write-Host "RDP user created successfully."
 
       - name: Install Tailscale
         shell: powershell
@@ -89,23 +98,23 @@ jobs:
           $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
           $ip = & $tailscale ip -4
 
-          Write-Host ""
+          if ($LASTEXITCODE -ne 0 -or !$ip) {
+            throw "Could not retrieve Tailscale IP."
+          }
+
           Write-Host "======================================"
           Write-Host "RDP READY"
           Write-Host "======================================"
           Write-Host "Tailscale IP : $ip"
           Write-Host "RDP Port     : 3389"
           Write-Host "Username     : $env:RDP_USERNAME"
-          Write-Host "Password     : $env:RDP_PASSWORD"
+          Write-Host "Password     : Stored in GitHub Secrets"
           Write-Host "======================================"
-          Write-Host ""
 
       - name: Keep Runner Alive
         shell: powershell
         run: |
           Write-Host "Windows RDP is running."
-          Write-Host "Keeping the runner alive..."
-
           while ($true) {
             Start-Sleep -Seconds 60
           }
