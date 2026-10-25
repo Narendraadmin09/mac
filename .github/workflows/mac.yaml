@@ -1,0 +1,63 @@
+name: macOS VNC + Tailscale
+
+on:
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Create VNC User and Enable Screen Sharing
+        shell: bash
+        env:
+          VNC_PASSWORD: ${{ secrets.MAC_VNC_PASSWORD }}
+        run: |
+          sudo dscl . -create /Users/macuser
+          sudo dscl . -create /Users/macuser UserShell /bin/bash
+          sudo dscl . -create /Users/macuser RealName "Mac User"
+          sudo dscl . -create /Users/macuser UniqueID 1001
+          sudo dscl . -create /Users/macuser PrimaryGroupID 80
+          sudo dscl . -create /Users/macuser NFSHomeDirectory /Users/macuser
+          sudo dscl . -passwd /Users/macuser "$VNC_PASSWORD"
+          sudo createhomedir -c -u macuser
+
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -allowAccessFor -allUsers -privs -all
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy -vnclegacy yes
+          echo "$VNC_PASSWORD" | perl -we 'BEGIN { @k = unpack "C*", pack "H*", "1734516E8BA8C5E2FF1C39567390ADCA"}; $_ = <>; chomp; s/^(.{8}).*/$1/; @p = unpack "C*", $_; foreach (@k) { printf "%02X", $_ ^ (shift @p || 0) }; print "\n"' | sudo tee /Library/Preferences/com.apple.VNCSettings.txt
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent -console
+
+          echo "VNC enabled."
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
+          hostname: github-mac-${{ github.run_id }}
+
+      - name: Get Tailscale IP
+        shell: bash
+        run: |
+          ip=$(tailscale ip -4)
+
+          echo ""
+          echo "======================================"
+          echo "VNC READY"
+          echo "======================================"
+          echo "Tailscale IP : $ip"
+          echo "VNC Address  : $ip:5900"
+          echo "Username     : macuser"
+          echo "Password     : (MAC_VNC_PASSWORD secret wala)"
+          echo "======================================"
+          echo ""
+
+      - name: Keep Runner Alive
+        shell: bash
+        run: |
+          echo "macOS VNC is running."
+          echo "Keeping the runner alive..."
+
+          while true; do
+            sleep 60
+          done
